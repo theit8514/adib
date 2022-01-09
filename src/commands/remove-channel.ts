@@ -18,7 +18,8 @@ const definition: ICommand = {
         const isGuildAdmin = member.permissions.has(Permissions.FLAGS.ADMINISTRATOR);
         const isBotAdmin = isUserAdmin(interaction.guild.id, interaction.user.id, member.roles.cache.map(r => r.id));
         if (!isGuildAdmin && !isBotAdmin) {
-            return await interaction.reply("Sorry, I can't help you with that.");
+            await interaction.reply("Sorry, I can't help you with that.");
+            return;
         }
 
         const channel = interaction.options.getChannel("channel", true);

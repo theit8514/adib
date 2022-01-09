@@ -1,6 +1,6 @@
 import { SlashCommandBuilder } from '@discordjs/builders'
 import { CommandInteraction, GuildMember, Permissions } from 'discord.js';
-import { addRoleAdmin, addUserAdmin, isUserAdmin } from '../db.js';
+import { addRoleAdmin, addUserAdmin } from '../db.js';
 import { ICommand } from '../icommand.js';
 
 const definition: ICommand = {
@@ -21,19 +21,21 @@ const definition: ICommand = {
         const member = interaction.member as GuildMember;
         const isGuildAdmin = member.permissions.has(Permissions.FLAGS.ADMINISTRATOR);
         if (!isGuildAdmin) {
-            return await interaction.reply({
+            await interaction.reply({
                 content: "Sorry, I can't help you with that.",
                 ephemeral: true
             });
+            return;
         }
 
         const role = interaction.options.getRole("role", false);
         const user = interaction.options.getUser("user", false);
         if (user === null && role === null) {
-            return await interaction.reply({
+            await interaction.reply({
                 content: "Must provide user or role.",
                 ephemeral: true
             });
+            return;
         }
 
         if (role !== null) {
