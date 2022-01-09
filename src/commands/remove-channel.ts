@@ -1,6 +1,6 @@
 import { SlashCommandBuilder } from '@discordjs/builders'
 import { CommandInteraction, GuildMember, Permissions } from 'discord.js';
-import { removeRoleAdmin, removeUserAdmin, isUserAdmin, removeChannel } from '../db.js';
+import { isUserAdmin, removeChannel } from '../db.js';
 import { ICommand } from '../icommand.js';
 
 const definition: ICommand = {

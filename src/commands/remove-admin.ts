@@ -20,7 +20,6 @@ const definition: ICommand = {
     async execute(interaction: CommandInteraction) {
         const member = interaction.member as GuildMember;
         const isGuildAdmin = member.permissions.has(Permissions.FLAGS.ADMINISTRATOR);
-        const isBotAdmin = isUserAdmin(interaction.guild.id, interaction.user.id, member.roles.cache.map(r => r.id));
         if (!isGuildAdmin) {
             return await interaction.reply("Sorry, I can't help you with that.");
         }
