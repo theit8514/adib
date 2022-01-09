@@ -1,6 +1,18 @@
 import StormDB from 'stormdb'
+import fs from 'fs'
+import path from 'path'
+import process from 'process'
 
-const engine = new StormDB.localFileEngine('./db.stormdb');
+const dataDir = path.resolve(process.cwd(), './data');
+
+try {
+    if (!fs.existsSync(dataDir))
+        fs.mkdirSync(dataDir);
+}
+catch {
+}
+
+const engine = new StormDB.localFileEngine(path.resolve(dataDir, 'db.stormdb'));
 const db = new StormDB(engine);
 
 export interface IAdmin {

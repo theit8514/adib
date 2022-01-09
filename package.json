@@ -6,6 +6,7 @@
   "type": "module",
   "scripts": {
     "start": "tsc && cd dist && node index.js",
+    "build": "tsc",
     "deploy-commands": "tsc && cd dist && node deploy-commands.js",
     "test-new-issue": "tsc && cd dist && node test-new-issue.js",
     "lint": "eslint . --ext .ts --fix",
