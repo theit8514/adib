@@ -1,0 +1,32 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"type": "npm",
+			"script": "start",
+			"problemMatcher": [
+				"$tsc"
+			],
+			"label": "npm: start",
+			"detail": "tsc && cd dist && node index.js"
+		},
+		{
+			"type": "npm",
+			"script": "deploy-commands",
+			"problemMatcher": [
+				"$tsc"
+			],
+			"label": "npm: deploy-commands",
+			"detail": "tsc && cd dist && node deploy-commands.js"
+		},
+		{
+			"type": "npm",
+			"script": "lint",
+			"problemMatcher": [
+				"$eslint-compact"
+			],
+			"label": "npm: lint",
+			"detail": "eslint . --ext .ts --fix"
+		}
+	]
+}
