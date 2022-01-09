@@ -19,7 +19,9 @@ const definition: ICommand = {
     // The execution method for this command
     async execute(interaction: CommandInteraction) {
         const member = interaction.member as GuildMember;
-        if (!member.permissions.has(Permissions.FLAGS.ADMINISTRATOR) || !isUserAdmin(interaction.guild.id, interaction.user.id, member.roles.cache.map(r => r.id))) {
+        const isGuildAdmin = member.permissions.has(Permissions.FLAGS.ADMINISTRATOR);
+        const isBotAdmin = isUserAdmin(interaction.guild.id, interaction.user.id, member.roles.cache.map(r => r.id));
+        if (!isGuildAdmin && !isBotAdmin) {
             return await interaction.reply({
                 content: "Sorry, I can't help you with that.",
                 ephemeral: true
