@@ -1,6 +1,8 @@
 import { SlashCommandBuilder } from '@discordjs/builders'
-import { BaseGuildTextChannel, CommandInteraction } from 'discord.js';
+import { BaseGuildTextChannel, CommandInteraction, MessageAttachment } from 'discord.js';
 import { ICommand } from '../icommand';
+import { createIssue } from '../interfaces/github/index.js'
+import { isChannelAllowed, isUserAdmin } from '../db.js'
 
 const states = {
     NEED_TITLE: "NEED_TITLE",
@@ -24,11 +26,13 @@ const definition: ICommand = {
     // The execution method for this command
     async execute(interaction: CommandInteraction) {
         // If someone attempts to call us in a thread, we can't create another thread, so don't continue.
-        if (interaction.channel.isThread()) {
-            await interaction.reply('Sorry, I cannot create a new issue here. Please try in #bug-reports');
+        if (interaction.channel.isThread() || !isChannelAllowed(interaction.guild.id, interaction.channel.id)) {
+            await interaction.reply({
+                content: 'Sorry, I cannot create a new issue here. Please try elsewhere.',
+                ephemeral: true
+            });
             return;
         }
-        // TODO: Check valid channelId based on configuration
 
         const botId = interaction.client.user.id;
         const userId = interaction.user.id;
@@ -37,11 +41,11 @@ const definition: ICommand = {
             content: "One second, creating a thread for your issue.",
             ephemeral: true
         });
-        
+
         // Get the options from the interaction
         let title = interaction.options.getString("title") ?? null;
         let state = title === null || title.length > 200 ? states.NEED_TITLE : states.READY_FOR_DESCRIPTION;
-        
+
         // Fetch the text channel where the message was sent
         const channel = await interaction.client.channels.fetch(interaction.channelId) as BaseGuildTextChannel
         // Create a new thread in this channel. Note that we cannot create a thread on an interaction since it is not actually a message.
@@ -67,7 +71,9 @@ const definition: ICommand = {
         const description: Array<IDescription> = [];
         // Append the description
         function addDescription(tag: string, message: string): void {
-            description.push({ tag: tag, message: message });
+            let fixedMessage = message.replace(/(.+)```/, (_, prefix) => [prefix, '\r\n', '```'].join(''));
+            fixedMessage = message.replace(/^```(.{4,})/, (_, suffix) => ['```', '\r\n', suffix].join(''));
+            description.push({ tag: tag, message: fixedMessage });
         }
         // Flatten the description into a string
         function flattenDescription(): string {
@@ -81,13 +87,20 @@ const definition: ICommand = {
                 return v.message;
             }).join('\r\n');
         }
-        // Create an issue with the title and description and return the issue number
-        function createIssue(title: string, description: string): number {
-            // TODO: Link github here
-            console.log(`Create issue ${title} with description:\r\n${description}`);
-            return 1234;
+        async function completeIssue(): Promise<void> {
+            state = states.PLEASE_WAIT;
+            collector.stop("completed");
+            const url = await createIssue(title, flattenDescription());
+            await threadedChannel.send(`Issue created successfully: ${url}`);
+            await closeThread();
         }
-        collector.on('collect', m => {
+        async function closeThread(): Promise<void> {
+            // Might not have lock permissions
+            try { await threadedChannel.setLocked(true); }
+            catch { }
+            await threadedChannel.setArchived(true);
+        }
+        collector.on('collect', async m => {
             // Ignore our own messages in this thread
             if (m.author.id == botId) {
                 return;
@@ -95,70 +108,79 @@ const definition: ICommand = {
             console.log(`${state}: Detected message in our thread: ${m.author.tag}: ${m.content}`)
             if (state === states.NEED_TITLE) {
                 if (m.content.length > 200) {
-                    threadedChannel.send("Sorry, that title is too long. Please try again.");
+                    await threadedChannel.send("Sorry, that title is too long. Please try again.");
                 } else {
                     title = m.content;
-                    threadedChannel.setName(`Issue Thread\\: ${title}`);
-                    threadedChannel.send(`Got it! Now you can use this thread to enter a description of your issue. You can add code blocks by using the syntax: \\\`\\\`\\\`js\r\n\\\`\\\`\\\`\r\n\r\n Once you have entered a description, type !done to create the issue.`);
+                    await threadedChannel.setName(`Issue Thread\\: ${title}`);
+                    await threadedChannel.send(`Got it! Now you can use this thread to enter a description of your issue. You can add code blocks by using the syntax: \\\`\\\`\\\`js\r\n\\\`\\\`\\\`\r\n\r\n Once you have entered a description, type !done to create the issue.`);
                     state = states.READY_FOR_DESCRIPTION;
                 }
             } else if (state === states.READY_FOR_DESCRIPTION) {
                 addDescription(m.author.tag, m.content);
-                // TODO: Add attachments to description as links to the Discord
-                // for (const key in m.attachments) {
-                //     //const file: MessageAttachment = m.attachments[key];
-                //     //file.proxyURL
-                // }
-                m.react("👍");
                 state = states.MORE_DESCRIPTION;
+                // TODO: Add attachments to description as links to the Discord
+                for (const key in m.attachments) {
+                    const file: MessageAttachment = m.attachments[key];
+                    addDescription(m.author.tag, `[attachment](${file.proxyURL})`);
+                }
+                await m.react("👍");
             } else if (state === states.MORE_DESCRIPTION) {
                 const command = m.content.toLowerCase();
-                if (command === "!done") {
-                    m.reply("Great! Please wait while I create that issue for you.");
-                    state = states.PLEASE_WAIT;
-                    const issueId = createIssue(title, flattenDescription());
-                    console.log(issueId);
-                    return;
-                } else if (command === "!wontfix") { // TODO: Admin users
-                    m.reply("Got it boss! Closing this thread as wontfix.");
-                    state = states.WONT_FIX;
-                    collector.stop("denied");
-                    return;
-                } else if (command === "!reject") {
-                    m.reply("Got it boss! Closing this thread as rejected.");
-                    state = states.REJECTED;
-                    collector.stop("denied");
-                    return;
-                } else if (command === "!duplicate") {
-                    m.reply("Got it boss! CLosing this thread as duplicate.");
-                    state = states.DUPLICATE;
-                    collector.stop("denied");
-                    return;
+                if (command.startsWith("!")) {
+                    const member = await m.guild.members.fetch(m.author.id);
+                    const roles = member.roles.cache.map(r => r.id);
+                    const isAdmin = isUserAdmin(m.guild.id, m.author.id, roles);
+                    if (command === "!done") {
+                        await m.reply("Great! Please wait while I create that issue for you.");
+                        completeIssue();
+                        const issueId = createIssue(title, flattenDescription());
+                        console.log(issueId);
+                        return;
+                    }
+                    if (isAdmin) {
+                        if (command === "!wontfix") { // TODO: Admin users
+                            await m.reply("Got it boss! Closing this thread as wontfix.");
+                            state = states.WONT_FIX;
+                            collector.stop();
+                            return;
+                        } else if (command === "!reject") {
+                            await m.reply("Got it boss! Closing this thread as rejected.");
+                            state = states.REJECTED;
+                            collector.stop();
+                            return;
+                        } else if (command === "!duplicate") {
+                            await m.reply("Got it boss! CLosing this thread as duplicate.");
+                            state = states.DUPLICATE;
+                            collector.stop();
+                            return;
+                        }
+                    }
                 }
+
                 addDescription(m.author.tag, m.content);
                 m.react("👍");
             }
         });
 
-        collector.once('end', () => {
-            // If we prematurely end this collector, then just archive the channel and exit.
-            if (collector.endReason === "denied") {
-                threadedChannel.setArchived(true);
-                // Might not have lock permissions
-                try { threadedChannel.setLocked(true); }
-                catch { }
-                return;
-            }
-
-            if (state === states.MORE_DESCRIPTION) {
-                threadedChannel.send("Sorry, but it looks like you didn't finish creating the issue. I'll go ahead and create it with the description you already provided.");
-                state = states.PLEASE_WAIT;
-                createIssue(title, flattenDescription());
-            } else if (state !== states.COMPLETED) {
-            } else {
-                threadedChannel.send("Sorry, but it looks like you didn't finish creating the issue. Since no description was provided, no issue was created. Please try again later.");
-                state = states.COMPLETED;
-                threadedChannel.setArchived(true);
+        collector.once('end', async () => {
+            switch (state) {
+                case states.PLEASE_WAIT:
+                case states.COMPLETED:
+                    break;
+                case states.WONT_FIX:
+                case states.REJECTED:
+                case states.DUPLICATE:
+                    await closeThread();
+                    break;
+                case states.MORE_DESCRIPTION:
+                    await threadedChannel.send("Sorry, but it looks like you didn't finish creating the issue. I'll go ahead and create it with the description you already provided.");
+                    await completeIssue();
+                    break;
+                default:
+                    await threadedChannel.send("Sorry, but it looks like you didn't finish creating the issue. Since no description was provided, no issue was created. Please try again later.");
+                    state = states.COMPLETED;
+                    await closeThread();
+                    break;
             }
         });
 

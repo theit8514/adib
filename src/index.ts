@@ -3,6 +3,9 @@ import fs from 'fs'
 import discordConfig from './discord-config.js'
 import { Client, Collection, CommandInteraction, Intents } from 'discord.js'
 import { ICommand } from './icommand.js';
+import * as db from './db.js';
+
+db.initialize();
 
 // Create a new client instance
 const client = new Client({
