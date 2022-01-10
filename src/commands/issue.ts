@@ -100,6 +100,7 @@ const definition: ICommand = {
             const labels = getDefaultLabels(interaction.guild.id);
             const url = await createIssue(title, flattenDescription(), labels);
             await threadedChannel.send(`Issue created successfully: ${url}`);
+            state = states.COMPLETED;
             await closeThread();
         }
         async function closeThread(): Promise<void> {
