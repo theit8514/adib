@@ -124,7 +124,7 @@ export function addDefaultLabel(guildId: string, label: string): boolean {
  * @param label The default label name
  * @returns True if the label was removed, false if the label was not in the table
  */
- export function removeDefaultLabel(guildId: string, label: string): boolean {
+export function removeDefaultLabel(guildId: string, label: string): boolean {
     const guild = getGuild(guildId);
     if (!guild.labels.some(l => l === label)) {
         return false;

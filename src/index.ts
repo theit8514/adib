@@ -26,26 +26,26 @@ const commandFiles = fs.readdirSync('./commands').filter(file => file.endsWith('
 await Promise.all(commandFiles.map(async file => {
     const commandImport = await import(`./commands/${file}`);
     const command = commandImport.default as ICommand;
-	// Set a new item in the Collection
-	// With the key as the command name and the value as the exported module
+    // Set a new item in the Collection
+    // With the key as the command name and the value as the exported module
     commands.set(command.data.name, command);
 }));
 
 client.on('interactionCreate', async (interaction: CommandInteraction) => {
     if (!interaction.isCommand()) return;
 
-	const command = commands.get(interaction.commandName);
+    const command = commands.get(interaction.commandName);
 
-	if (!command) return;
+    if (!command) return;
 
-	try {
-		await command.execute(interaction);
-	} catch (error) {
-		console.error(error);
+    try {
+        await command.execute(interaction);
+    } catch (error) {
+        console.error(error);
         // If the interaction is no longer valid, this may fail. Don't worry about it.
-		try { await interaction.reply({ content: 'There was an error while executing this command!', ephemeral: true }); }
+        try { await interaction.reply({ content: 'There was an error while executing this command!', ephemeral: true }); }
         catch { }
-	}
+    }
 });
 
 // Login to Discord with your client's token

@@ -15,12 +15,12 @@ export async function createIssue(title: string, description: string, labels: st
             appId: githubConfig.APP_ID,
             privateKey: fs.readFileSync(githubConfig.PRIVATE_KEY_FILE, "utf8")
         });
-        
-        const installation = await app.octokit.request("GET /repos/{owner}/{repo}/installation",{
+
+        const installation = await app.octokit.request("GET /repos/{owner}/{repo}/installation", {
             owner: githubConfig.REPOSITORY_OWNER,
             repo: githubConfig.REPOSITORY_NAME
         });
-        
+
         const installationId = installation.data.id;
         const octokit = await app.getInstallationOctokit(installationId);
         const result = await octokit.request("POST /repos/{owner}/{repo}/issues", {

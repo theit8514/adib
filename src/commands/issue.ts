@@ -45,7 +45,7 @@ const definition: ICommand = {
         });
 
         // Get the options from the interaction
-        const filter = new Filter({ placeHolder: 'x'});
+        const filter = new Filter({ placeHolder: 'x' });
         let title = interaction.options.getString("title") ?? null;
         if (title !== null) title = filter.clean(title);
         let state = title === null || title.length > 200 ? states.NEED_TITLE : states.READY_FOR_DESCRIPTION;
