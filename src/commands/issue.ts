@@ -140,9 +140,7 @@ const definition: ICommand = {
                     const isAdmin = isUserAdmin(m.guild.id, m.author.id, roles);
                     if (command === "!done") {
                         await m.reply("Great! Please wait while I create that issue for you.");
-                        completeIssue();
-                        const issueId = createIssue(title, flattenDescription());
-                        console.log(issueId);
+                        await completeIssue();
                         return;
                     }
                     if (isAdmin) {
