@@ -24,6 +24,7 @@ const definition: ICommand = {
                 content: "No channels added.",
                 ephemeral: true
             });
+            return;
         }
         const embed = new MessageEmbed()
             .setColor('#0099ff')
