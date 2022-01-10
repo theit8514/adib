@@ -77,7 +77,7 @@ const definition: ICommand = {
         function addDescription(tag: string, message: string): void {
             let fixedMessage = message;
             fixedMessage = filter.clean(fixedMessage);
-            fixedMessage = fixedMessage.replace(codeBlockRegex, (match, code) => {
+            fixedMessage = fixedMessage.replace(codeBlockRegex, match => {
                 return ["\r\n", match, "\r\n"].join('');
             })
             description.push({ tag: tag, message: fixedMessage });
