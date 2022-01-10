@@ -3,7 +3,9 @@ import { BaseGuildTextChannel, CommandInteraction, MessageAttachment } from 'dis
 import { ICommand } from '../icommand';
 import { createIssue } from '../interfaces/github/index.js'
 import { isChannelAllowed, isUserAdmin } from '../db.js'
+import Filter from 'bad-words'
 
+const codeBlockRegex = /```[\s\S]*?```/g;
 const states = {
     NEED_TITLE: "NEED_TITLE",
     READY_FOR_DESCRIPTION: "READY_FOR_DESCRIPTION",
@@ -43,7 +45,9 @@ const definition: ICommand = {
         });
 
         // Get the options from the interaction
+        const filter = new Filter({ placeHolder: 'x'});
         let title = interaction.options.getString("title") ?? null;
+        if (title !== null) title = filter.clean(title);
         let state = title === null || title.length > 200 ? states.NEED_TITLE : states.READY_FOR_DESCRIPTION;
 
         // Fetch the text channel where the message was sent
@@ -71,8 +75,11 @@ const definition: ICommand = {
         const description: Array<IDescription> = [];
         // Append the description
         function addDescription(tag: string, message: string): void {
-            let fixedMessage = message.replace(/(.+)```/, (_, prefix) => [prefix, '\r\n', '```'].join(''));
-            fixedMessage = message.replace(/^```(.{4,})/, (_, suffix) => ['```', '\r\n', suffix].join(''));
+            let fixedMessage = message;
+            fixedMessage = filter.clean(fixedMessage);
+            fixedMessage = fixedMessage.replace(codeBlockRegex, (match, code) => {
+                return ["\r\n", match, "\r\n"].join('');
+            })
             description.push({ tag: tag, message: fixedMessage });
         }
         // Flatten the description into a string
