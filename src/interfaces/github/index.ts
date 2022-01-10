@@ -9,7 +9,7 @@ import { App } from '@octokit/app'
  * @param description The description of the new issue
  * @returns The url of the created issue
  */
-export async function createIssue(title: string, description: string): Promise<string | null> {
+export async function createIssue(title: string, description: string, labels: string[] = []): Promise<string | null> {
     try {
         const app = new App({
             appId: githubConfig.APP_ID,
@@ -27,7 +27,8 @@ export async function createIssue(title: string, description: string): Promise<s
             owner: githubConfig.REPOSITORY_OWNER,
             repo: githubConfig.REPOSITORY_NAME,
             title: title,
-            body: description
+            body: description,
+            labels: labels
         });
         return result.data.html_url;
     }

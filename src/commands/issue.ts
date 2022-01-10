@@ -2,7 +2,7 @@ import { SlashCommandBuilder } from '@discordjs/builders'
 import { BaseGuildTextChannel, CommandInteraction, MessageAttachment } from 'discord.js';
 import { ICommand } from '../icommand';
 import { createIssue } from '../interfaces/github/index.js'
-import { isChannelAllowed, isUserAdmin } from '../db.js'
+import { getDefaultLabels, isChannelAllowed, isUserAdmin } from '../db.js'
 import Filter from 'bad-words'
 
 const codeBlockRegex = /```[\s\S]*?```/g;
@@ -97,7 +97,8 @@ const definition: ICommand = {
         async function completeIssue(): Promise<void> {
             state = states.PLEASE_WAIT;
             collector.stop("completed");
-            const url = await createIssue(title, flattenDescription());
+            const labels = getDefaultLabels(interaction.guild.id);
+            const url = await createIssue(title, flattenDescription(), labels);
             await threadedChannel.send(`Issue created successfully: ${url}`);
             await closeThread();
         }
