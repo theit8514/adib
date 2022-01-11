@@ -27,6 +27,15 @@
 			],
 			"label": "npm: lint",
 			"detail": "eslint . --ext .ts --fix"
+		},
+		{
+			"type": "npm",
+			"script": "deploy-global-commands",
+			"problemMatcher": [
+				"$tsc"
+			],
+			"label": "npm: deploy-global-commands",
+			"detail": "tsc && cd dist && node deploy-global-commands.js"
 		}
 	]
 }
