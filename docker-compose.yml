@@ -2,6 +2,7 @@ version: '3.8'
 
 services:
   app:
+    image: theit8514/adib:latest
     build: .
     env_file: ./.env
     environment:
